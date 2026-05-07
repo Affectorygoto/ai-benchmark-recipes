@@ -1,46 +1,623 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Claude Code Output Placeholder</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecipeFinder — 食材から、ひらめきレシピへ</title>
+  <meta name="description" content="冷蔵庫にある食材を入れるだけで、AIが提案するようなレシピが見つかる検索アプリ。" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'system-ui', 'sans-serif'],
+            display: ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            cream: '#FBF7F1',
+            ink: '#2B2A28',
+            tomato: '#E2533B',
+            tomatoDark: '#C9402A',
+            herb: '#5C7A4A',
+            mustard: '#D9A441',
+          },
+          boxShadow: {
+            soft: '0 8px 24px rgba(43, 42, 40, 0.08)',
+            card: '0 12px 32px rgba(43, 42, 40, 0.10)',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-400px 0' },
+              '100%': { backgroundPosition: '400px 0' },
+            },
+          },
+          animation: {
+            fadeUp: 'fadeUp 0.5s ease-out both',
+            shimmer: 'shimmer 1.4s infinite linear',
+          },
+        },
+      },
+    };
+  </script>
   <style>
+    html { scroll-behavior: smooth; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f6f8fa;
-      color: #1f2428;
+      background-color: #FBF7F1;
+      background-image:
+        radial-gradient(circle at 12% 8%, rgba(226, 83, 59, 0.08), transparent 40%),
+        radial-gradient(circle at 88% 92%, rgba(92, 122, 74, 0.10), transparent 45%);
+      color: #2B2A28;
     }
-
-    main {
-      max-width: 560px;
-      padding: 28px;
-      background: #fff;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
+    .skeleton {
+      background: linear-gradient(90deg, #efe7da 0%, #f7f1e6 50%, #efe7da 100%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
     }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      letter-spacing: 0;
+    .chip {
+      transition: all 0.18s ease;
     }
-
-    p {
-      margin: 0;
-      color: #667085;
-      line-height: 1.6;
+    .chip:hover { transform: translateY(-1px); }
+    .focus-ring:focus-visible {
+      outline: 3px solid #E2533B;
+      outline-offset: 2px;
+      border-radius: 12px;
+    }
+    .recipe-card {
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(43,42,40,0.12); }
+    .difficulty-pill .dot {
+      width: 6px; height: 6px; border-radius: 9999px; display: inline-block;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fadeUp, .skeleton { animation: none !important; }
     }
   </style>
 </head>
-<body>
-  <main>
-    <h1>Claude Code output is not placed yet</h1>
-    <p>ベンチマーク実行後、Claude Codeが生成した完成版の <code>index.html</code> でこのファイルを置き換えます。</p>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-ink/10 bg-cream/80 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5" aria-label="RecipeFinder ホーム">
+        <span class="w-9 h-9 rounded-full bg-tomato text-white grid place-items-center shadow-soft" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+            <path d="M12 2c1.5 2.5 4 4 6 4-1 4-4 6-6 6s-5-2-6-6c2 0 4.5-1.5 6-4z"/>
+            <path d="M5 14c0-1 1-2 2-2h10c1 0 2 1 2 2 0 4-3 8-7 8s-7-4-7-8z" opacity=".85"/>
+          </svg>
+        </span>
+        <span class="font-display text-xl tracking-wide">RecipeFinder</span>
+      </a>
+      <span class="hidden sm:inline-flex items-center gap-1.5 text-xs text-ink/60">
+        <span class="w-1.5 h-1.5 rounded-full bg-herb"></span>
+        AIレシピ提案デモ
+      </span>
+    </div>
+  </header>
+
+  <!-- Hero / Search -->
+  <main id="main" class="flex-1">
+    <section class="max-w-6xl mx-auto px-5 sm:px-8 pt-10 sm:pt-14 pb-6">
+      <div class="max-w-3xl">
+        <p class="text-tomato font-medium text-sm tracking-wider uppercase mb-3">Today's Inspiration</p>
+        <h1 class="font-display text-3xl sm:text-5xl leading-tight mb-4">
+          冷蔵庫の食材で、<br class="hidden sm:block" />今夜の一皿を見つけよう。
+        </h1>
+        <p class="text-ink/70 text-base sm:text-lg leading-relaxed">
+          食材名を入力すると、その食材を活かしたレシピをAIが提案したかのようにお届けします。気分や時間に合わせて選んでみてください。
+        </p>
+      </div>
+
+      <!-- Search Form -->
+      <form id="searchForm" class="mt-8 sm:mt-10" novalidate aria-describedby="searchHelp">
+        <label for="ingredientInput" class="sr-only">食材名</label>
+        <div class="bg-white rounded-2xl shadow-card p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 border border-ink/5">
+          <div class="flex-1 flex items-center gap-2.5 px-3 sm:px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-ink/40 shrink-0" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/>
+            </svg>
+            <input
+              id="ingredientInput"
+              name="ingredient"
+              type="text"
+              autocomplete="off"
+              placeholder="例: 鶏肉、トマト、卵 …"
+              class="w-full py-3 sm:py-3.5 text-base sm:text-lg bg-transparent placeholder:text-ink/35 focus:outline-none focus-ring"
+              aria-invalid="false"
+              aria-describedby="errorMessage"
+            />
+          </div>
+          <button
+            type="submit"
+            class="bg-tomato hover:bg-tomatoDark text-white font-medium px-6 py-3 sm:py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 focus-ring"
+          >
+            <span>レシピを探す</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="w-4 h-4" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <p id="errorMessage" role="alert" aria-live="polite" class="hidden mt-3 text-sm text-tomatoDark flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+            <path d="M12 2 1 21h22L12 2zm0 6 7.5 13h-15L12 8zm-1 4v4h2v-4h-2zm0 5v2h2v-2h-2z"/>
+          </svg>
+          <span id="errorText">食材名を入力してください。</span>
+        </p>
+
+        <div id="searchHelp" class="mt-5">
+          <p class="text-xs text-ink/50 mb-2">人気の食材から試す</p>
+          <div class="flex flex-wrap gap-2" role="group" aria-label="サンプル食材">
+            <!-- chips inserted by JS -->
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Results -->
+    <section class="max-w-6xl mx-auto px-5 sm:px-8 pb-20" aria-live="polite">
+      <div id="resultsHeader" class="hidden mb-6 flex items-end justify-between flex-wrap gap-3">
+        <h2 id="resultsTitle" class="font-display text-2xl sm:text-3xl">検索結果</h2>
+        <p id="resultsCount" class="text-sm text-ink/60"></p>
+      </div>
+
+      <!-- Loading skeletons -->
+      <div id="loading" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- 3 skeleton cards -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="empty" class="hidden text-center py-16 px-4 animate-fadeUp">
+        <div class="w-20 h-20 mx-auto rounded-full bg-mustard/15 grid place-items-center mb-5" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#D9A441" stroke-width="1.8" class="w-10 h-10">
+            <circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2" stroke-linecap="round"/>
+            <line x1="9" y1="9" x2="9.01" y2="9" stroke-linecap="round"/>
+            <line x1="15" y1="9" x2="15.01" y2="9" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 class="font-display text-xl mb-2">該当するレシピが見つかりませんでした</h3>
+        <p class="text-ink/60 text-sm max-w-md mx-auto">
+          別の食材名で試してみてください。「鶏肉」「トマト」「卵」「豆腐」「鮭」などはサンプルが用意されています。
+        </p>
+      </div>
+
+      <!-- Recipe grid -->
+      <div id="recipeGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+      <!-- Initial hint (shown before any search) -->
+      <div id="initialHint" class="text-center py-12 sm:py-16 px-4">
+        <p class="font-display text-2xl sm:text-3xl text-ink/85 mb-3">何か食材を入れて、検索してみてください</p>
+        <p class="text-ink/55 text-sm max-w-md mx-auto">
+          冷蔵庫を覗いてみて、あるものを試しに入力してみましょう。サンプルレシピは5種類用意しています。
+        </p>
+      </div>
+    </section>
   </main>
+
+  <!-- Recipe modal -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-6 bg-ink/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div id="modalCard" class="bg-cream w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-card animate-fadeUp">
+      <div class="sticky top-0 bg-cream/95 backdrop-blur border-b border-ink/10 px-5 sm:px-7 py-4 flex items-center justify-between gap-3">
+        <h3 id="modalTitle" class="font-display text-xl sm:text-2xl truncate">タイトル</h3>
+        <button id="modalClose" type="button" class="p-2 rounded-full hover:bg-ink/5 focus-ring" aria-label="閉じる">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="w-5 h-5">
+            <path d="M6 6l12 12M18 6l-12 12" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="modalBody" class="px-5 sm:px-7 py-5 sm:py-6"></div>
+    </div>
+  </div>
+
+  <footer class="border-t border-ink/10 mt-auto">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8 py-6 text-xs text-ink/55 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>© RecipeFinder — AIレシピ提案デモ</p>
+      <p>このアプリの提案は擬似データに基づくものです。</p>
+    </div>
+  </footer>
+
+  <script>
+    // ============= Sample Recipe Dataset =============
+    const RECIPES = [
+      {
+        id: 'r1',
+        title: 'とろける鶏もも肉のハニーマスタード焼き',
+        emoji: '🍗',
+        accent: 'from-mustard/20 to-tomato/15',
+        summary: 'はちみつと粒マスタードのソースを絡めてオーブンへ。表面はカリッ、中はジューシーな主役級メインディッシュ。',
+        ingredients: [
+          { name: '鶏もも肉', amount: '2枚 (約500g)' },
+          { name: 'はちみつ', amount: '大さじ2' },
+          { name: '粒マスタード', amount: '大さじ2' },
+          { name: '醤油', amount: '大さじ1' },
+          { name: 'にんにく (すりおろし)', amount: '1片分' },
+          { name: 'オリーブオイル', amount: '大さじ1' },
+          { name: '塩・こしょう', amount: '適量' },
+        ],
+        steps: [
+          '鶏もも肉は厚みを均一に開き、塩こしょうを振る。',
+          'はちみつ、粒マスタード、醤油、にんにくを混ぜ合わせ、鶏肉に揉み込み15分置く。',
+          'フライパンにオリーブオイルを熱し、皮目から中火で焼く。',
+          '皮がパリッとしたら裏返し、200℃のオーブンで12分焼く。',
+          '取り出して5分休ませ、削ぎ切りにして器に盛る。',
+        ],
+        time: '35分',
+        difficulty: '普通',
+        keywords: ['鶏肉', '鶏もも', 'チキン', '鶏', 'はちみつ', 'マスタード'],
+      },
+      {
+        id: 'r2',
+        title: 'たっぷりトマトと夏野菜のカポナータ',
+        emoji: '🍅',
+        accent: 'from-tomato/20 to-herb/15',
+        summary: 'トマトの甘酸っぱさとなすの旨味が溶け合うシチリアの伝統料理。冷やしても温めても美味しい万能副菜。',
+        ingredients: [
+          { name: 'トマト', amount: '4個 (中)' },
+          { name: 'なす', amount: '2本' },
+          { name: '玉ねぎ', amount: '1個' },
+          { name: 'セロリ', amount: '1本' },
+          { name: 'オリーブ (種抜き)', amount: '10粒' },
+          { name: 'ケッパー', amount: '小さじ2' },
+          { name: '赤ワインビネガー', amount: '大さじ1' },
+          { name: 'オリーブオイル', amount: '大さじ4' },
+        ],
+        steps: [
+          'トマトは湯むきして角切り、なすと玉ねぎ、セロリも1.5cm角に切る。',
+          'フライパンになすを揚げ焼きにし、軽く塩を振っておく。',
+          '別の鍋でオリーブオイルを熱し、玉ねぎとセロリを透き通るまで炒める。',
+          'トマトとオリーブ、ケッパーを加え、弱火で15分煮込む。',
+          'なすを戻し入れ、赤ワインビネガーで味を整える。粗熱を取って馴染ませる。',
+        ],
+        time: '40分',
+        difficulty: '普通',
+        keywords: ['トマト', 'なす', '玉ねぎ', 'カポナータ', '野菜'],
+      },
+      {
+        id: 'r3',
+        title: 'ふわとろ卵のシンプル親子丼',
+        emoji: '🥚',
+        accent: 'from-mustard/25 to-tomato/10',
+        summary: '出汁の効いた優しい味わい。半熟卵が鶏肉と玉ねぎを優しく包み込む、忙しい日の救世主。',
+        ingredients: [
+          { name: '卵', amount: '3個' },
+          { name: '鶏もも肉', amount: '150g' },
+          { name: '玉ねぎ', amount: '1/2個' },
+          { name: 'だし汁', amount: '100ml' },
+          { name: '醤油', amount: '大さじ1.5' },
+          { name: 'みりん', amount: '大さじ1.5' },
+          { name: '砂糖', amount: '小さじ1' },
+          { name: 'ご飯', amount: '丼2杯分' },
+          { name: '三つ葉 (お好みで)', amount: '少々' },
+        ],
+        steps: [
+          '鶏肉は一口大、玉ねぎは薄切りにする。',
+          '小鍋にだし汁、醤油、みりん、砂糖を入れて煮立てる。',
+          '玉ねぎと鶏肉を加え、火が通るまで4分ほど煮る。',
+          '溶き卵の2/3を回し入れ、フタをして30秒。',
+          '残りの卵を回し入れて10秒で火を止め、ご飯にのせて三つ葉を散らす。',
+        ],
+        time: '15分',
+        difficulty: '簡単',
+        keywords: ['卵', 'たまご', '親子丼', '鶏肉', 'ご飯', '丼'],
+      },
+      {
+        id: 'r4',
+        title: '麻婆豆腐 — 山椒香る本格派',
+        emoji: '🌶️',
+        accent: 'from-tomato/25 to-mustard/15',
+        summary: '豆板醤と甜麺醤の旨味、花椒のしびれる香り。ご飯がどこまでも進む四川の定番。',
+        ingredients: [
+          { name: '木綿豆腐', amount: '1丁 (350g)' },
+          { name: '豚ひき肉', amount: '150g' },
+          { name: '長ねぎ', amount: '1/2本' },
+          { name: 'にんにく・しょうが', amount: '各1片' },
+          { name: '豆板醤', amount: '大さじ1' },
+          { name: '甜麺醤', amount: '大さじ1' },
+          { name: '鶏ガラスープ', amount: '200ml' },
+          { name: '醤油', amount: '大さじ1' },
+          { name: '水溶き片栗粉', amount: '適量' },
+          { name: '花椒 (ホール)', amount: '小さじ1/2' },
+        ],
+        steps: [
+          '豆腐は2cm角に切り、塩を加えた湯で2分下茹でする。',
+          'にんにく・しょうが・長ねぎはみじん切りに。',
+          'フライパンに油と花椒を入れて香りを出し、ひき肉を中火で炒める。',
+          '豆板醤・甜麺醤を加えて炒め、にんにくしょうがも加える。',
+          'スープと醤油、豆腐を入れて3分煮る。水溶き片栗粉でとろみをつけ、ねぎを散らす。',
+        ],
+        time: '25分',
+        difficulty: '普通',
+        keywords: ['豆腐', '麻婆', 'ひき肉', '中華', '豚肉'],
+      },
+      {
+        id: 'r5',
+        title: '鮭とほうれん草のクリームパスタ',
+        emoji: '🐟',
+        accent: 'from-herb/20 to-mustard/15',
+        summary: 'バターで香ばしく焼いた鮭と濃厚クリームが絡む至福の一皿。ワインのお供にも。',
+        ingredients: [
+          { name: '生鮭', amount: '2切れ' },
+          { name: 'ほうれん草', amount: '1/2束' },
+          { name: '玉ねぎ', amount: '1/4個' },
+          { name: 'にんにく', amount: '1片' },
+          { name: '生クリーム', amount: '200ml' },
+          { name: '粉チーズ', amount: '大さじ2' },
+          { name: 'パスタ (フェットチーネ推奨)', amount: '160g' },
+          { name: 'バター・塩・黒こしょう', amount: '適量' },
+        ],
+        steps: [
+          '鮭は塩こしょうを振り、骨を取って一口大に。ほうれん草はざく切り。',
+          '鍋に湯を沸かし、塩を加えてパスタを茹で始める。',
+          'フライパンにバターを溶かしにんにくと玉ねぎを炒め、鮭を加えて両面焼く。',
+          '生クリームを加えて煮立て、ほうれん草と粉チーズを加える。',
+          '茹で上がったパスタを和え、塩こしょうで味を整える。',
+        ],
+        time: '20分',
+        difficulty: '簡単',
+        keywords: ['鮭', 'サーモン', 'パスタ', 'ほうれん草', 'クリーム'],
+      },
+    ];
+
+    const POPULAR_CHIPS = ['鶏肉', 'トマト', '卵', '豆腐', '鮭'];
+
+    // ============= Utilities =============
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    function escapeHTML(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function difficultyMeta(diff) {
+      switch (diff) {
+        case '簡単': return { color: 'bg-herb/15 text-herb', dot: 'bg-herb', label: '簡単' };
+        case '普通': return { color: 'bg-mustard/20 text-mustard', dot: 'bg-mustard', label: '普通' };
+        case '上級': return { color: 'bg-tomato/15 text-tomatoDark', dot: 'bg-tomato', label: '上級' };
+        default: return { color: 'bg-ink/10 text-ink/70', dot: 'bg-ink/40', label: diff };
+      }
+    }
+
+    function searchRecipes(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return RECIPES.filter(r => {
+        const haystack = [r.title, r.summary, ...r.keywords, ...r.ingredients.map(i => i.name)]
+          .join(' ').toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    // ============= Render: Chips =============
+    function renderChips() {
+      const container = $('#searchHelp [role="group"]');
+      container.innerHTML = POPULAR_CHIPS.map(c => `
+        <button type="button" data-chip="${escapeHTML(c)}"
+          class="chip text-sm px-3.5 py-1.5 rounded-full bg-white border border-ink/10 text-ink/75 hover:border-tomato hover:text-tomato shadow-soft focus-ring">
+          ${escapeHTML(c)}
+        </button>
+      `).join('');
+      container.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-chip]');
+        if (!btn) return;
+        const value = btn.dataset.chip;
+        $('#ingredientInput').value = value;
+        runSearch(value);
+      });
+    }
+
+    // ============= Render: Skeleton =============
+    function renderSkeleton() {
+      const container = $('#loading');
+      container.innerHTML = Array.from({ length: 3 }).map(() => `
+        <div class="bg-white rounded-2xl shadow-soft overflow-hidden">
+          <div class="skeleton h-36"></div>
+          <div class="p-5 space-y-3">
+            <div class="skeleton h-5 w-3/4 rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-5/6 rounded"></div>
+            <div class="flex gap-2 pt-2">
+              <div class="skeleton h-6 w-16 rounded-full"></div>
+              <div class="skeleton h-6 w-20 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ============= Render: Recipe Cards =============
+    function renderRecipes(list, query) {
+      const grid = $('#recipeGrid');
+      const header = $('#resultsHeader');
+      const title = $('#resultsTitle');
+      const count = $('#resultsCount');
+      const empty = $('#empty');
+
+      header.classList.remove('hidden');
+      header.classList.add('flex');
+      title.textContent = `「${query}」のレシピ提案`;
+      count.textContent = list.length > 0 ? `${list.length}件のレシピが見つかりました` : '';
+
+      if (list.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = list.map((r, idx) => {
+        const d = difficultyMeta(r.difficulty);
+        return `
+        <article class="recipe-card bg-white rounded-2xl shadow-soft overflow-hidden flex flex-col animate-fadeUp" style="animation-delay:${idx * 60}ms">
+          <button type="button" data-recipe="${r.id}" class="text-left flex-1 flex flex-col focus-ring">
+            <div class="h-36 bg-gradient-to-br ${r.accent} grid place-items-center" aria-hidden="true">
+              <span class="text-6xl drop-shadow-sm">${r.emoji}</span>
+            </div>
+            <div class="p-5 flex-1 flex flex-col">
+              <h3 class="font-display text-lg leading-snug mb-2">${escapeHTML(r.title)}</h3>
+              <p class="text-sm text-ink/65 leading-relaxed line-clamp-3 mb-4">${escapeHTML(r.summary)}</p>
+              <div class="mt-auto flex flex-wrap items-center gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 bg-ink/5 text-ink/70 px-2.5 py-1 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>
+                  ${escapeHTML(r.time)}
+                </span>
+                <span class="difficulty-pill inline-flex items-center gap-1.5 ${d.color} px-2.5 py-1 rounded-full font-medium">
+                  <span class="dot ${d.dot}"></span>${escapeHTML(d.label)}
+                </span>
+                <span class="ml-auto text-ink/40 inline-flex items-center gap-0.5 text-xs">
+                  詳細
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </div>
+            </div>
+          </button>
+        </article>
+      `;}).join('');
+
+      grid.querySelectorAll('[data-recipe]').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.recipe));
+      });
+    }
+
+    // ============= Modal =============
+    let lastFocusEl = null;
+    function openModal(id) {
+      const r = RECIPES.find(x => x.id === id);
+      if (!r) return;
+      lastFocusEl = document.activeElement;
+      const d = difficultyMeta(r.difficulty);
+      $('#modalTitle').textContent = r.title;
+      $('#modalBody').innerHTML = `
+        <div class="rounded-2xl bg-gradient-to-br ${r.accent} h-32 sm:h-40 grid place-items-center mb-5" aria-hidden="true">
+          <span class="text-6xl sm:text-7xl">${r.emoji}</span>
+        </div>
+        <p class="text-ink/75 leading-relaxed mb-5">${escapeHTML(r.summary)}</p>
+        <div class="flex flex-wrap gap-2 mb-6 text-xs">
+          <span class="inline-flex items-center gap-1 bg-ink/5 text-ink/70 px-3 py-1.5 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>
+            調理時間 ${escapeHTML(r.time)}
+          </span>
+          <span class="difficulty-pill inline-flex items-center gap-1.5 ${d.color} px-3 py-1.5 rounded-full font-medium">
+            <span class="dot ${d.dot}"></span>難易度 ${escapeHTML(d.label)}
+          </span>
+        </div>
+        <h4 class="font-display text-lg mb-3 flex items-center gap-2">
+          <span class="w-1 h-5 bg-tomato rounded"></span>材料
+        </h4>
+        <ul class="mb-6 divide-y divide-ink/5 border border-ink/5 rounded-xl bg-white/60">
+          ${r.ingredients.map(i => `
+            <li class="flex items-center justify-between px-4 py-2.5 text-sm">
+              <span class="text-ink/85">${escapeHTML(i.name)}</span>
+              <span class="text-ink/55">${escapeHTML(i.amount)}</span>
+            </li>
+          `).join('')}
+        </ul>
+        <h4 class="font-display text-lg mb-3 flex items-center gap-2">
+          <span class="w-1 h-5 bg-herb rounded"></span>手順
+        </h4>
+        <ol class="space-y-3 mb-2">
+          ${r.steps.map((s, i) => `
+            <li class="flex gap-3 text-sm leading-relaxed">
+              <span class="shrink-0 w-7 h-7 rounded-full bg-tomato text-white grid place-items-center font-medium text-xs">${i + 1}</span>
+              <span class="pt-0.5 text-ink/85">${escapeHTML(s)}</span>
+            </li>
+          `).join('')}
+        </ol>
+      `;
+      const modal = $('#modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+      $('#modalClose').focus();
+    }
+
+    function closeModal() {
+      const modal = $('#modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.style.overflow = '';
+      if (lastFocusEl) lastFocusEl.focus();
+    }
+
+    // ============= Search Flow =============
+    let searchTimer = null;
+    function runSearch(rawQuery) {
+      const query = (rawQuery || '').trim();
+      const errEl = $('#errorMessage');
+      const errText = $('#errorText');
+      const input = $('#ingredientInput');
+
+      if (!query) {
+        errEl.classList.remove('hidden');
+        errEl.classList.add('flex');
+        errText.textContent = '食材名を入力してください。例: 鶏肉、トマト、卵 など';
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+        return;
+      }
+      errEl.classList.add('hidden');
+      errEl.classList.remove('flex');
+      input.setAttribute('aria-invalid', 'false');
+
+      // hide initial hint, show loading
+      $('#initialHint').classList.add('hidden');
+      $('#resultsHeader').classList.add('hidden');
+      $('#empty').classList.add('hidden');
+      $('#recipeGrid').innerHTML = '';
+      const loading = $('#loading');
+      loading.classList.remove('hidden');
+      loading.classList.add('grid');
+      renderSkeleton();
+
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        loading.classList.add('hidden');
+        loading.classList.remove('grid');
+        const results = searchRecipes(query);
+        renderRecipes(results, query);
+        // smooth scroll to results
+        const headerEl = $('#resultsHeader');
+        if (headerEl && !headerEl.classList.contains('hidden')) {
+          headerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 850);
+    }
+
+    // ============= Bindings =============
+    document.addEventListener('DOMContentLoaded', () => {
+      renderChips();
+
+      $('#searchForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        runSearch($('#ingredientInput').value);
+      });
+
+      $('#ingredientInput').addEventListener('input', () => {
+        const errEl = $('#errorMessage');
+        if (!errEl.classList.contains('hidden') && $('#ingredientInput').value.trim()) {
+          errEl.classList.add('hidden');
+          errEl.classList.remove('flex');
+          $('#ingredientInput').setAttribute('aria-invalid', 'false');
+        }
+      });
+
+      $('#modalClose').addEventListener('click', closeModal);
+      $('#modal').addEventListener('click', (e) => {
+        if (e.target.id === 'modal') closeModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) closeModal();
+      });
+    });
+  </script>
 </body>
 </html>
