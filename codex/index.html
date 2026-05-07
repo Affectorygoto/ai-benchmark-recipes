@@ -1,46 +1,406 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Codex Output Placeholder</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="食材名からAI風のレシピ提案を表示するシンプルな検索アプリ">
+  <title>AIレシピ提案</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif']
+          },
+          colors: {
+            leaf: '#2f7d57',
+            tomato: '#dc4c3f',
+            citrus: '#f6b84b',
+            ink: '#22302a'
+          },
+          boxShadow: {
+            soft: '0 18px 50px rgba(34, 48, 42, 0.12)'
+          }
+        }
+      }
+    };
+  </script>
   <style>
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f6f8fa;
-      color: #1f2428;
+      background:
+        radial-gradient(circle at top left, rgba(246, 184, 75, 0.18), transparent 34rem),
+        linear-gradient(135deg, #fffdf7 0%, #f4fbf7 45%, #fff8f3 100%);
     }
 
-    main {
-      max-width: 560px;
-      padding: 28px;
-      background: #fff;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
+    .food-plate {
+      background:
+        radial-gradient(circle at 30% 35%, rgba(220, 76, 63, 0.95) 0 9%, transparent 10%),
+        radial-gradient(circle at 57% 38%, rgba(47, 125, 87, 0.92) 0 11%, transparent 12%),
+        radial-gradient(circle at 43% 62%, rgba(246, 184, 75, 0.95) 0 12%, transparent 13%),
+        radial-gradient(circle at 68% 63%, rgba(255, 255, 255, 0.9) 0 8%, transparent 9%),
+        linear-gradient(145deg, #ffffff 0%, #edf8f0 100%);
     }
 
-    h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      letter-spacing: 0;
+    .loading-dot {
+      animation: bounce 0.9s infinite ease-in-out;
     }
 
-    p {
-      margin: 0;
-      color: #667085;
-      line-height: 1.6;
+    .loading-dot:nth-child(2) {
+      animation-delay: 0.12s;
+    }
+
+    .loading-dot:nth-child(3) {
+      animation-delay: 0.24s;
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.45;
+      }
+      40% {
+        transform: translateY(-0.45rem);
+        opacity: 1;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
-<body>
-  <main>
-    <h1>Codex output is not placed yet</h1>
-    <p>ベンチマーク実行後、Codexが生成した完成版の <code>index.html</code> でこのファイルを置き換えます。</p>
+<body class="min-h-screen text-ink antialiased">
+  <a href="#search-form" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-leaf focus:shadow-soft">
+    検索フォームへ移動
+  </a>
+
+  <main class="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+    <header class="flex flex-col gap-5 pb-7 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-3">
+        <div class="food-plate h-14 w-14 shrink-0 rounded-full border-4 border-white shadow-soft" aria-hidden="true"></div>
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-leaf">Recipe Match</p>
+          <h1 class="text-2xl font-black leading-tight text-ink sm:text-3xl">AIレシピ提案</h1>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 rounded-lg border border-white/80 bg-white/70 p-2 text-center shadow-sm backdrop-blur sm:min-w-72">
+        <div class="rounded-lg bg-[#eff8f1] px-3 py-2">
+          <p class="text-lg font-black text-leaf">5</p>
+          <p class="text-[11px] font-bold text-slate-600">レシピ</p>
+        </div>
+        <div class="rounded-lg bg-[#fff4e0] px-3 py-2">
+          <p class="text-lg font-black text-[#b76400]">15-35</p>
+          <p class="text-[11px] font-bold text-slate-600">分</p>
+        </div>
+        <div class="rounded-lg bg-[#fff0ee] px-3 py-2">
+          <p class="text-lg font-black text-tomato">2</p>
+          <p class="text-[11px] font-bold text-slate-600">難易度</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-stretch">
+      <div class="rounded-lg border border-white/80 bg-white/85 p-5 shadow-soft backdrop-blur sm:p-7">
+        <div class="mb-6 overflow-hidden rounded-lg bg-[#15382b] text-white">
+          <div class="grid min-h-48 grid-cols-1 items-stretch sm:grid-cols-[1fr_0.75fr]">
+            <div class="flex flex-col justify-between p-5 sm:p-6">
+              <div>
+                <p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#f6d58d]">Fresh Ideas</p>
+                <h2 class="max-w-[12rem] text-3xl font-black leading-tight sm:text-4xl">冷蔵庫の中から、今日の一皿へ。</h2>
+              </div>
+              <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold text-[#15382b]">
+                <span class="rounded-full bg-white px-3 py-1.5">トマト</span>
+                <span class="rounded-full bg-white px-3 py-1.5">卵</span>
+                <span class="rounded-full bg-white px-3 py-1.5">鮭</span>
+              </div>
+            </div>
+            <div class="relative min-h-44 bg-[#f5fbef] sm:min-h-48" aria-hidden="true">
+              <div class="absolute -right-8 top-6 h-44 w-44 rounded-full bg-white shadow-soft"></div>
+              <div class="absolute right-2 top-12 h-32 w-32 rounded-full border-[14px] border-[#ecf7e8] bg-white shadow-inner"></div>
+              <div class="absolute right-12 top-16 h-11 w-11 rounded-full bg-tomato shadow-sm"></div>
+              <div class="absolute right-6 top-28 h-10 w-14 rounded-full bg-leaf shadow-sm"></div>
+              <div class="absolute right-20 top-28 h-12 w-12 rounded-full bg-citrus shadow-sm"></div>
+              <div class="absolute bottom-5 right-8 h-3 w-32 rotate-[-18deg] rounded-full bg-[#9f7b52]"></div>
+              <div class="absolute bottom-10 right-2 h-3 w-28 rotate-[-30deg] rounded-full bg-[#9f7b52]"></div>
+            </div>
+          </div>
+        </div>
+
+        <form id="search-form" class="space-y-4" novalidate>
+          <div>
+            <label for="ingredient-input" class="mb-2 block text-sm font-bold text-ink">食材名</label>
+            <div class="flex flex-col gap-3 sm:flex-row">
+              <input
+                id="ingredient-input"
+                name="ingredient"
+                type="search"
+                autocomplete="off"
+                placeholder="例: トマト、卵、鶏むね肉"
+                class="min-h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-base font-medium text-ink outline-none transition focus:border-leaf focus:ring-4 focus:ring-leaf/15"
+                aria-describedby="validation-message search-hint"
+              >
+              <button
+                type="submit"
+                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-leaf px-5 text-base font-black text-white shadow-lg shadow-leaf/20 transition hover:bg-[#286a4a] focus:outline-none focus:ring-4 focus:ring-leaf/25 active:translate-y-px sm:w-32"
+              >
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                検索
+              </button>
+            </div>
+            <p id="search-hint" class="mt-2 text-sm leading-relaxed text-slate-600">食材名を1つ以上入力してください。</p>
+            <p id="validation-message" class="mt-2 hidden rounded-lg border border-tomato/25 bg-tomato/10 px-4 py-3 text-sm font-bold text-[#9f2017]" role="alert"></p>
+          </div>
+        </form>
+      </div>
+
+      <section class="flex min-h-[34rem] flex-col rounded-lg border border-white/80 bg-white/80 p-4 shadow-soft backdrop-blur sm:p-6" aria-live="polite" aria-busy="false" id="results-region">
+        <div class="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.16em] text-leaf">Suggestions</p>
+            <h2 id="results-heading" class="text-2xl font-black text-ink">おすすめレシピ</h2>
+          </div>
+          <p id="result-count" class="rounded-lg bg-[#eff8f1] px-4 py-2 text-sm font-bold text-leaf">全5件</p>
+        </div>
+
+        <div id="loading-state" class="hidden flex-1 items-center justify-center rounded-lg bg-[#f7fbf8] p-8 text-center">
+          <div>
+            <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
+              <span class="loading-dot mx-0.5 h-2.5 w-2.5 rounded-full bg-leaf"></span>
+              <span class="loading-dot mx-0.5 h-2.5 w-2.5 rounded-full bg-citrus"></span>
+              <span class="loading-dot mx-0.5 h-2.5 w-2.5 rounded-full bg-tomato"></span>
+            </div>
+            <p class="text-lg font-black text-ink">レシピを考えています</p>
+            <p class="mt-1 text-sm text-slate-600">食材の相性と調理時間を照合中です。</p>
+          </div>
+        </div>
+
+        <div id="empty-state" class="hidden flex-1 items-center justify-center rounded-lg bg-[#fff8f2] p-8 text-center">
+          <div class="max-w-sm">
+            <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-sm" aria-hidden="true">?</div>
+            <h3 class="text-xl font-black text-ink">該当するレシピが見つかりませんでした</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">別の食材名や、より短いキーワードで検索してみてください。</p>
+          </div>
+        </div>
+
+        <div id="results-list" class="grid gap-4"></div>
+      </section>
+    </section>
   </main>
+
+  <template id="recipe-card-template">
+    <article class="recipe-card rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg sm:p-5">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+          <h3 class="recipe-title text-xl font-black leading-tight text-ink"></h3>
+          <p class="recipe-summary mt-2 text-sm leading-relaxed text-slate-600"></p>
+        </div>
+        <div class="grid shrink-0 grid-cols-2 gap-2 text-sm sm:min-w-44">
+          <span class="recipe-time rounded-lg bg-[#fff4e0] px-3 py-2 text-center font-bold text-[#9b5a00]"></span>
+          <span class="recipe-difficulty rounded-lg bg-[#eff8f1] px-3 py-2 text-center font-bold text-leaf"></span>
+        </div>
+      </div>
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <section class="rounded-lg bg-[#f7fbf8] p-4">
+          <h4 class="mb-3 text-sm font-black text-ink">材料</h4>
+          <ul class="recipe-ingredients grid gap-2 text-sm leading-relaxed text-slate-700"></ul>
+        </section>
+        <section class="rounded-lg bg-[#fff9f0] p-4">
+          <h4 class="mb-3 text-sm font-black text-ink">手順</h4>
+          <ol class="recipe-steps grid list-decimal gap-2 pl-5 text-sm leading-relaxed text-slate-700"></ol>
+        </section>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const recipes = [
+      {
+        title: 'トマトと卵のふわっと中華炒め',
+        summary: '甘酸っぱいトマトと半熟卵を短時間で仕上げる、朝食にも夕食にも使いやすい一皿です。',
+        ingredients: ['トマト 2個', '卵 3個', '長ねぎ 1/3本', 'ごま油 小さじ2', '鶏がらスープの素 小さじ1', '塩 少々'],
+        steps: ['トマトを大きめのくし切りにし、長ねぎは斜め薄切りにする。', '溶き卵を半熟になるまで炒め、一度取り出す。', '同じフライパンでトマトと長ねぎを炒め、調味料を加える。', '卵を戻し入れ、全体を大きく混ぜて火を止める。'],
+        time: '15分',
+        difficulty: 'かんたん',
+        keywords: ['トマト', '卵', '玉子', 'たまご', '長ねぎ', '中華', '炒め物']
+      },
+      {
+        title: '鶏むね肉とブロッコリーのレモン蒸し',
+        summary: 'しっとり蒸した鶏むね肉にレモンの香りを合わせた、軽やかで満足感のあるメイン料理です。',
+        ingredients: ['鶏むね肉 1枚', 'ブロッコリー 1/2株', 'レモン 1/2個', 'オリーブオイル 大さじ1', '酒 大さじ2', '塩こしょう 少々'],
+        steps: ['鶏むね肉をそぎ切りにし、塩こしょうをなじませる。', 'ブロッコリーを小房に分け、レモンは薄切りにする。', 'フライパンに材料を並べ、酒とオリーブオイルを回しかける。', 'ふたをして弱めの中火で8分ほど蒸し、余熱で火を通す。'],
+        time: '20分',
+        difficulty: 'かんたん',
+        keywords: ['鶏むね肉', '鶏肉', 'チキン', 'ブロッコリー', 'レモン', '蒸し料理']
+      },
+      {
+        title: 'きのこと豆腐の和風あんかけ',
+        summary: 'きのこの旨みをとろみで包み、豆腐にたっぷりかけるやさしい味わいの温かい副菜です。',
+        ingredients: ['絹ごし豆腐 1丁', 'しめじ 1/2株', 'えのき 1/2袋', 'しょうが 1片', 'だし 200ml', 'しょうゆ 大さじ1', '片栗粉 小さじ2'],
+        steps: ['豆腐を食べやすい大きさに切り、軽く温める。', '鍋でだしを沸かし、きのことしょうがを加えて煮る。', 'しょうゆで味を整え、水溶き片栗粉でとろみをつける。', '豆腐にあんをかけ、好みで青ねぎを散らす。'],
+        time: '18分',
+        difficulty: 'かんたん',
+        keywords: ['きのこ', 'しめじ', 'えのき', '豆腐', 'しょうが', '和風', 'あんかけ']
+      },
+      {
+        title: '鮭とじゃがいもの味噌バター焼き',
+        summary: '香ばしい味噌バターで鮭とじゃがいもをまとめた、白いごはんに合う満足度の高いおかずです。',
+        ingredients: ['生鮭 2切れ', 'じゃがいも 2個', '玉ねぎ 1/2個', '味噌 大さじ1.5', 'バター 15g', 'みりん 大さじ1', '青ねぎ 適量'],
+        steps: ['じゃがいもを薄めの輪切りにし、電子レンジで3分加熱する。', '鮭は食べやすく切り、玉ねぎは薄切りにする。', 'フライパンに材料を並べ、味噌とみりんを混ぜて回しかける。', 'ふたをして蒸し焼きにし、仕上げにバターを溶かす。'],
+        time: '25分',
+        difficulty: 'ふつう',
+        keywords: ['鮭', 'サーモン', 'じゃがいも', '玉ねぎ', '味噌', 'バター', '焼き物']
+      },
+      {
+        title: 'なすとひき肉のスパイスカレー',
+        summary: 'なすのとろっとした食感とひき肉の旨みを活かした、フライパンで作れる香り豊かなカレーです。',
+        ingredients: ['なす 3本', '豚ひき肉 200g', '玉ねぎ 1個', 'カットトマト 200g', 'カレー粉 大さじ1.5', 'にんにく 1片', 'ヨーグルト 大さじ2'],
+        steps: ['なすを乱切りにし、玉ねぎとにんにくはみじん切りにする。', 'ひき肉、玉ねぎ、にんにくを炒め、なすを加える。', 'カレー粉を炒め合わせ、カットトマトを入れて煮る。', 'ヨーグルトを加えてまろやかに整え、塩で味を決める。'],
+        time: '35分',
+        difficulty: 'ふつう',
+        keywords: ['なす', '茄子', 'ひき肉', '豚肉', '玉ねぎ', 'トマト', 'カレー', 'スパイス']
+      }
+    ];
+
+    const form = document.getElementById('search-form');
+    const input = document.getElementById('ingredient-input');
+    const validation = document.getElementById('validation-message');
+    const resultsRegion = document.getElementById('results-region');
+    const loadingState = document.getElementById('loading-state');
+    const emptyState = document.getElementById('empty-state');
+    const resultsList = document.getElementById('results-list');
+    const resultsHeading = document.getElementById('results-heading');
+    const resultCount = document.getElementById('result-count');
+    const template = document.getElementById('recipe-card-template');
+    let loadingTimer;
+
+    function normalizeText(text) {
+      return text
+        .normalize('NFKC')
+        .toLowerCase()
+        .replace(/[、，,\s]+/g, ' ')
+        .trim();
+    }
+
+    function getSearchTokens(query) {
+      return normalizeText(query).split(' ').filter(Boolean);
+    }
+
+    function getRecipeSearchText(recipe) {
+      return normalizeText([
+        recipe.title,
+        recipe.summary,
+        recipe.ingredients.join(' '),
+        recipe.keywords.join(' ')
+      ].join(' '));
+    }
+
+    function filterRecipes(query) {
+      const tokens = getSearchTokens(query);
+      return recipes.filter((recipe) => {
+        const searchText = getRecipeSearchText(recipe);
+        return tokens.every((token) => searchText.includes(token));
+      });
+    }
+
+    function createListItem(text) {
+      const item = document.createElement('li');
+      item.textContent = text;
+      return item;
+    }
+
+    function renderRecipes(items, query = '') {
+      resultsList.innerHTML = '';
+      emptyState.classList.add('hidden');
+      resultsList.classList.remove('hidden');
+
+      if (items.length === 0) {
+        resultsHeading.textContent = '検索結果';
+        resultCount.textContent = '0件';
+        resultsList.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      resultsHeading.textContent = query ? `「${query}」のレシピ` : 'おすすめレシピ';
+      resultCount.textContent = query ? `${items.length}件` : `全${items.length}件`;
+
+      items.forEach((recipe) => {
+        const card = template.content.firstElementChild.cloneNode(true);
+        card.querySelector('.recipe-title').textContent = recipe.title;
+        card.querySelector('.recipe-summary').textContent = recipe.summary;
+        card.querySelector('.recipe-time').textContent = `調理 ${recipe.time}`;
+        card.querySelector('.recipe-difficulty').textContent = recipe.difficulty;
+
+        const ingredients = card.querySelector('.recipe-ingredients');
+        recipe.ingredients.forEach((ingredient) => {
+          ingredients.appendChild(createListItem(ingredient));
+        });
+
+        const steps = card.querySelector('.recipe-steps');
+        recipe.steps.forEach((step) => {
+          steps.appendChild(createListItem(step));
+        });
+
+        resultsList.appendChild(card);
+      });
+    }
+
+    function showValidation(message) {
+      validation.textContent = message;
+      validation.classList.remove('hidden');
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+    }
+
+    function clearValidation() {
+      validation.textContent = '';
+      validation.classList.add('hidden');
+      input.removeAttribute('aria-invalid');
+    }
+
+    function setLoading(isLoading) {
+      resultsRegion.setAttribute('aria-busy', String(isLoading));
+      loadingState.classList.toggle('hidden', !isLoading);
+      loadingState.classList.toggle('flex', isLoading);
+      resultsList.classList.toggle('hidden', isLoading);
+      emptyState.classList.add('hidden');
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      window.clearTimeout(loadingTimer);
+
+      const query = input.value.trim();
+      if (!query) {
+        setLoading(false);
+        showValidation('食材名を入力してから検索してください。');
+        return;
+      }
+
+      clearValidation();
+      setLoading(true);
+
+      loadingTimer = window.setTimeout(() => {
+        const matches = filterRecipes(query);
+        setLoading(false);
+        renderRecipes(matches, query);
+      }, 700);
+    });
+
+    input.addEventListener('input', () => {
+      if (input.value.trim()) {
+        clearValidation();
+      }
+    });
+
+    renderRecipes(recipes);
+  </script>
 </body>
 </html>
