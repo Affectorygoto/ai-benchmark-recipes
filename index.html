@@ -130,20 +130,20 @@
   <main>
     <header>
       <h1>AI Benchmark Results</h1>
-      <p>Codex と Claude Code に同一プロンプトを実行させた結果を比較するための共有ページです。</p>
+      <p>2つのAIモデルに同一プロンプトを実行させた結果を、ブラインドで比較するための共有ページです。</p>
     </header>
 
     <div class="grid" aria-label="Benchmark result links">
-      <a class="card" href="./codex/">
-        <span class="label">Codex</span>
-        <h2>Codex Output</h2>
-        <p>Codex が生成したシングルHTMLアプリを表示します。</p>
+      <a class="card" href="./model_a/">
+        <span class="label">Model A</span>
+        <h2>Model A Output</h2>
+        <p>Model A が生成したシングルHTMLアプリを表示します。</p>
       </a>
 
-      <a class="card" href="./claude/">
-        <span class="label">Claude Code</span>
-        <h2>Claude Code Output</h2>
-        <p>Claude Code が生成したシングルHTMLアプリを表示します。</p>
+      <a class="card" href="./model_b/">
+        <span class="label">Model B</span>
+        <h2>Model B Output</h2>
+        <p>Model B が生成したシングルHTMLアプリを表示します。</p>
       </a>
     </div>
 
@@ -151,7 +151,7 @@
       <h2>Evaluation Notes</h2>
       <p>評価時は、生成物の見た目だけでなく、指示遵守・レスポンシブ対応・バリデーション・ローディング演出・説明のわかりやすさを同じ観点で確認します。</p>
       <ul>
-        <li>各成果物は <code>codex/index.html</code> と <code>claude/index.html</code> に配置します。</li>
+        <li>各成果物は <code>model_a/index.html</code> と <code>model_b/index.html</code> に配置します。</li>
         <li>GitHub Pagesの公開元は <code>main</code> ブランチの <code>/(root)</code> を想定します。</li>
         <li>社外秘情報、APIキー、顧客情報は載せません。</li>
       </ul>

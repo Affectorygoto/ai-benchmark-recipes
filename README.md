@@ -1,11 +1,11 @@
 # AI Benchmark GitHub Pages Site
 
-Codex and Claude Code benchmark outputs for internal review.
+Anonymized AI model benchmark outputs for blind internal review.
 
 ## What Goes Where
 
-- `codex/index.html`: Codex app output
-- `claude/index.html`: Claude Code app output
+- `model_a/index.html`: Model A app output
+- `model_b/index.html`: Model B app output
 - `index.html`: comparison landing page
 - `prompts/`: exact prompts used for the benchmark
 
